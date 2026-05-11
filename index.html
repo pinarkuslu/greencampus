@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="Karbon ve Su Ayak İzi Farkındalık Analizi — interaktif akademik sürdürülebilirlik panosu." />
+<meta name="theme-color" content="#04110e" />
+<link rel="icon" type="image/svg+xml" href="favicon.svg" />
+<link rel="apple-touch-icon" href="favicon.svg" />
+<title>GreenCampus</title>
+<script>
+  // Pre-paint theme — avoids FOUC by setting data-theme before stylesheet applies
+  (function () {
+    try {
+      var t = localStorage.getItem('theme');
+      if (!t) t = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  })();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- LOADING SCREEN -->
+<div class="loader" id="loader">
+  <div class="loader-ring">
+    <svg viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r="42" class="ring-bg"></circle>
+      <circle cx="50" cy="50" r="42" class="ring-fg" id="ringFg"></circle>
+    </svg>
+    <div class="loader-pct" id="loaderPct">0%</div>
+  </div>
+  <div class="loader-label">Veriler işleniyor</div>
+</div>
+
+<!-- SCROLL PROGRESS -->
+<div class="scroll-progress" id="scrollProgress"></div>
+
+<!-- CUSTOM CURSOR GLOW -->
+<div class="cursor-glow" id="cursorGlow"></div>
+
+<!-- NAV -->
+<nav class="nav" id="nav">
+  <div class="nav-inner">
+    <a href="#hero" class="brand">
+      <span class="brand-mark">
+        <svg viewBox="0 0 32 32" aria-hidden="true">
+          <defs>
+            <linearGradient id="leafGrad" x1="0" x2="1" y1="0" y2="1">
+              <stop offset="0" stop-color="#34f5c5"/>
+              <stop offset="1" stop-color="#0aa37a"/>
+            </linearGradient>
+          </defs>
+          <path d="M6 26 C6 14 14 6 26 6 C26 18 18 26 6 26 Z" fill="url(#leafGrad)"/>
+          <path d="M8 24 C14 18 20 14 24 10" stroke="#04110e" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        </svg>
+      </span>
+      <span class="brand-text">GreenCampus</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="#about">Araştırma</a></li>
+      <li><a href="#concepts">Kavramlar</a></li>
+      <li><a href="#stats">İstatistikler</a></li>
+      <li><a href="#dashboard">Pano</a></li>
+      <li><a href="#sdg">SKH</a></li>
+      <li><a href="#method">Yöntem</a></li>
+    </ul>
+    <div class="nav-actions">
+      <button class="theme-toggle" id="themeToggle" type="button" aria-label="Tema değiştir" title="Tema değiştir">
+        <svg class="icon icon-moon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <path d="M21 12.8A8 8 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" fill="currentColor"/>
+        </svg>
+        <svg class="icon icon-sun" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <circle cx="12" cy="12" r="4" fill="currentColor"/>
+          <g stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none">
+            <line x1="12" y1="2.5" x2="12" y2="5.5"/>
+            <line x1="12" y1="18.5" x2="12" y2="21.5"/>
+            <line x1="2.5" y1="12" x2="5.5" y2="12"/>
+            <line x1="18.5" y1="12" x2="21.5" y2="12"/>
+            <line x1="4.8" y1="4.8" x2="6.9" y2="6.9"/>
+            <line x1="17.1" y1="17.1" x2="19.2" y2="19.2"/>
+            <line x1="4.8" y1="19.2" x2="6.9" y2="17.1"/>
+            <line x1="17.1" y1="6.9" x2="19.2" y2="4.8"/>
+          </g>
+        </svg>
+      </button>
+      <a href="#dashboard" class="nav-cta">Panoyu Aç</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="hero">
+  <div class="hero-bg">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+    <canvas id="particles"></canvas>
+    <div class="grid-overlay"></div>
+  </div>
+
+  <div class="hero-content">
+    <div class="hero-tag reveal">
+      <span class="dot"></span>
+      <span>Akademik Araştırma · 2026</span>
+    </div>
+    <h1 class="hero-title">
+      <span class="line reveal" style="--d:.05s">Karbon ve Su</span>
+      <span class="line reveal gradient-text" style="--d:.15s">Ayak İzi Farkındalık</span>
+      <span class="line reveal" style="--d:.25s">Analizi</span>
+    </h1>
+    <p class="hero-sub reveal" style="--d:.4s">
+      210 üniversite öğrencisinin katıldığı, sürdürülebilirlik bilinci ile karbon
+      ve su ayak izi alışkanlıklarını ölçen disiplinlerarası nicel saha çalışması.
+    </p>
+    <div class="hero-cta reveal" style="--d:.55s">
+      <a href="#dashboard" class="btn btn-primary">
+        <span>İnteraktif Panoyu Keşfet</span>
+        <svg viewBox="0 0 24 24" width="18" height="18"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+      <a href="#about" class="btn btn-ghost">Araştırmayı Tanı</a>
+    </div>
+
+    <div class="hero-metrics reveal" style="--d:.7s">
+      <div class="metric">
+        <div class="metric-value" data-count="210">0</div>
+        <div class="metric-label">Katılımcı</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value">
+          <span data-count="10">0</span><span class="suf">+</span>
+        </div>
+        <div class="metric-label">Demografik Soru</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value">
+          <span data-count="2">0</span>
+        </div>
+        <div class="metric-label">Ayak İzi Ölçeği</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value">
+          <span data-count="7">0</span>
+        </div>
+        <div class="metric-label">SKH Hedefi</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="scroll-indicator">
+    <div class="mouse"><div class="wheel"></div></div>
+    <span>aşağı kaydır</span>
+  </div>
+</section>
+
+<!-- ABOUT -->
+<section class="about" id="about">
+  <div class="container">
+    <header class="section-head reveal">
+      <span class="kicker">01 · Araştırma Hakkında</span>
+      <h2 class="section-title">Sürdürülebilirliği <span class="gradient-text">ölçülebilir</span> kılmak</h2>
+      <p class="section-lead">
+        Çalışma, üniversite öğrencilerinin günlük tüketim davranışlarının çevresel
+        etkisini niceliksel olarak değerlendirmek için tasarlandı. Anket; demografi,
+        çevresel duyarlılık, karbon ayak izi ve su ayak izi olmak üzere dört eksende
+        toplam 50'yi aşkın ifade içermektedir.
+      </p>
+    </header>
+
+    <div class="pillars">
+      <article class="pillar reveal">
+        <div class="pillar-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 2C8 6 5 9 5 14a7 7 0 0 0 14 0c0-5-3-8-7-12Z" stroke="currentColor" stroke-width="1.6" fill="none"/></svg>
+        </div>
+        <h3>Disiplinlerarası Yaklaşım</h3>
+        <p>Mühendislik, fen-edebiyat ve iktisadi bilimler fakültelerinden katılımcılarla çok yönlü davranış analizi.</p>
+      </article>
+      <article class="pillar reveal" style="--d:.1s">
+        <div class="pillar-icon">
+          <svg viewBox="0 0 24 24"><path d="M3 12h3l3-8 4 16 3-8h5" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <h3>Nicel Ölçek</h3>
+        <p>5'li Likert ölçeği ile gıda, atık, ulaşım, yakıt, elektrik ve su tüketimi davranışları puanlanmıştır.</p>
+      </article>
+      <article class="pillar reveal" style="--d:.2s">
+        <div class="pillar-icon">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6" fill="none"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" stroke="currentColor" stroke-width="1.6" fill="none"/></svg>
+        </div>
+        <h3>Çevresel Etki Endeksi</h3>
+        <p>Bireysel davranışların karbon ve su ayak izi üzerindeki kümülatif etkisi, anonim biçimde modellendi.</p>
+      </article>
+      <article class="pillar reveal" style="--d:.3s">
+        <div class="pillar-icon">
+          <svg viewBox="0 0 24 24"><path d="M4 20l4-4 4 4 8-12" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <h3>Politika & Eğitim</h3>
+        <p>Sonuçlar, üniversite içi sürdürülebilirlik politikaları ve farkındalık programlarına girdi olarak sunulur.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- CONCEPTS -->
+<section class="concepts" id="concepts">
+  <div class="concepts-decor" aria-hidden="true">
+    <div class="decor-blob decor-blob-1"></div>
+    <div class="decor-blob decor-blob-2"></div>
+  </div>
+  <div class="container">
+    <header class="section-head reveal">
+      <span class="kicker">02 · Kavramlar</span>
+      <h2 class="section-title">Ölçtüğümüz <span class="gradient-text">iki ayak izi</span></h2>
+      <p class="section-lead">Bu çalışmanın temelinde yer alan iki sürdürülebilirlik metriğini kısaca tanıyın.</p>
+    </header>
+
+    <div class="concept-spread">
+      <article class="concept-entry reveal" data-kind="carbon">
+        <div class="concept-mark">
+          <svg class="mark-symbol" viewBox="0 0 360 200" preserveAspectRatio="xMidYMid meet" aria-label="CO2">
+            <defs>
+              <linearGradient id="gradCarbon" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#34f5c5"/>
+                <stop offset="100%" stop-color="#3aa8ff"/>
+              </linearGradient>
+            </defs>
+            <text x="180" y="145" text-anchor="middle" fill="url(#gradCarbon)"
+                  font-family="'Space Grotesk', sans-serif" font-size="170" font-weight="300" letter-spacing="-6">CO<tspan dy="28" font-size="90">2</tspan></text>
+          </svg>
+          <span class="mark-unit">ton CO<sub>2</sub>-eşdeğeri</span>
+        </div>
+        <div class="concept-body">
+          <span class="concept-tag">Karbon Ayak İzi</span>
+          <h3 class="concept-headline">Atmosfere bıraktığımız <em>görünmez</em> iz.</h3>
+          <p class="concept-text">Bir bireyin, ürünün ya da kurumun doğrudan ve dolaylı yollarla atmosfere saldığı sera gazlarının — başta CO<sub>2</sub> olmak üzere — toplam miktarıdır. İklim değişikliği üzerindeki kişisel etkimizi sayısal olarak izlenebilir kılar.</p>
+          <a href="https://tr.wikipedia.org/wiki/Karbon_ayak_izi" target="_blank" rel="noopener noreferrer" class="concept-cta">
+            <span>Wikipedia'da derinleştir</span>
+            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+        </div>
+      </article>
+
+      <div class="concept-rule" aria-hidden="true"></div>
+
+      <article class="concept-entry reverse reveal" data-kind="water">
+        <div class="concept-mark">
+          <svg class="mark-symbol" viewBox="0 0 360 200" preserveAspectRatio="xMidYMid meet" aria-label="H2O">
+            <defs>
+              <linearGradient id="gradWater" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#3aa8ff"/>
+                <stop offset="100%" stop-color="#5be8d8"/>
+              </linearGradient>
+            </defs>
+            <text x="180" y="145" text-anchor="middle" fill="url(#gradWater)"
+                  font-family="'Space Grotesk', sans-serif" font-size="170" font-weight="300" letter-spacing="-6">H<tspan dy="28" font-size="90">2</tspan><tspan dy="-28" font-size="170">O</tspan></text>
+          </svg>
+          <span class="mark-unit">m³ tatlı su</span>
+        </div>
+        <div class="concept-body">
+          <span class="concept-tag">Su Ayak İzi</span>
+          <h3 class="concept-headline">Hayatımızdaki <em>gizli</em> su izi.</h3>
+          <p class="concept-text">Bir ürün, hizmet ya da bireyin yaşamı için doğrudan ve dolaylı olarak tüketilen toplam tatlı su miktarıdır. Mavi (kullanılan), yeşil (yağmur kaynaklı) ve gri (kirletici seyreltme) olmak üzere üç bileşene ayrılır.</p>
+          <a href="https://tr.wikipedia.org/wiki/Su_ayak_izi" target="_blank" rel="noopener noreferrer" class="concept-cta">
+            <span>Wikipedia'da derinleştir</span>
+            <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- LIVE STATS -->
+<section class="stats" id="stats">
+  <div class="container">
+    <header class="section-head reveal">
+      <span class="kicker">03 · Canlı İstatistik</span>
+      <h2 class="section-title">Bir bakışta <span class="gradient-text">katılımcı profili</span></h2>
+    </header>
+
+    <div class="stat-grid">
+      <div class="stat-card glass reveal">
+        <div class="stat-num"><span data-count="210">0</span></div>
+        <div class="stat-cap">Toplam Yanıt</div>
+        <div class="stat-bar"><span style="--w:100%"></span></div>
+      </div>
+      <div class="stat-card glass reveal" style="--d:.08s">
+        <div class="stat-num"><span data-count="65" data-suffix=".7%">0</span></div>
+        <div class="stat-cap">Kadın Katılımcı</div>
+        <div class="stat-bar"><span style="--w:65.7%"></span></div>
+      </div>
+      <div class="stat-card glass reveal" style="--d:.16s">
+        <div class="stat-num"><span data-count="80" data-suffix="%">0</span></div>
+        <div class="stat-cap">19–24 Yaş Aralığı</div>
+        <div class="stat-bar"><span style="--w:80%"></span></div>
+      </div>
+      <div class="stat-card glass reveal" style="--d:.24s">
+        <div class="stat-num"><span data-count="92" data-suffix=".4%">0</span></div>
+        <div class="stat-cap">Lisans Öğrencisi</div>
+        <div class="stat-bar"><span style="--w:92.4%"></span></div>
+      </div>
+      <div class="stat-card glass reveal" style="--d:.32s">
+        <div class="stat-num"><span data-count="32" data-suffix=".4%">0</span></div>
+        <div class="stat-cap">Mühendislik Fakültesi</div>
+        <div class="stat-bar"><span style="--w:32.4%"></span></div>
+      </div>
+      <div class="stat-card glass reveal" style="--d:.4s">
+        <div class="stat-num"><span data-count="78" data-suffix=".6%">0</span></div>
+        <div class="stat-cap">Daha Önce Hesaplamadı</div>
+        <div class="stat-bar"><span style="--w:78.6%"></span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DASHBOARD -->
+<section class="dashboard" id="dashboard">
+  <div class="container">
+    <header class="section-head reveal">
+      <span class="kicker">04 · İnteraktif Pano</span>
+      <h2 class="section-title">Sonuçlar <span class="gradient-text">canlı</span> ve etkileşimli</h2>
+      <p class="section-lead">Anketin tüm bölümlerini yeniden tasarlanmış, animasyonlu grafiklerle inceleyin. Her grafik üzerine gelerek detayları görebilirsiniz.</p>
+    </header>
+
+    <!-- Tab filters -->
+    <div class="tabs reveal" role="tablist">
+      <button class="tab active" data-tab="demo">Demografi</button>
+      <button class="tab" data-tab="aware">Farkındalık</button>
+      <button class="tab" data-tab="carbon">Karbon Ayak İzi</button>
+      <button class="tab" data-tab="water">Su Ayak İzi</button>
+    </div>
+
+    <!-- DEMOGRAPHICS PANEL -->
+    <div class="panel active" data-panel="demo">
+      <div class="chart-grid">
+
+        <article class="chart-card glass reveal" data-chart="gender">
+          <header>
+            <h3>Cinsiyet Dağılımı</h3>
+            <span class="badge">210 yanıt</span>
+          </header>
+          <div class="chart-body">
+            <div class="donut" data-donut='[{"label":"Kadın","value":65.7,"color":"#34f5c5"},{"label":"Erkek","value":34.3,"color":"#3aa8ff"}]'>
+              <svg viewBox="0 0 120 120"></svg>
+              <div class="donut-center"><strong>%65.7</strong><span>Kadın</span></div>
+            </div>
+            <ul class="legend"></ul>
+          </div>
+        </article>
+
+        <article class="chart-card glass reveal" style="--d:.08s">
+          <header>
+            <h3>Yaş Grupları</h3>
+            <span class="badge">3 segment</span>
+          </header>
+          <div class="chart-body">
+            <div class="donut" data-donut='[{"label":"19–24","value":80,"color":"#34f5c5"},{"label":"25–34","value":15,"color":"#ffb547"},{"label":"35 ve üzeri","value":5,"color":"#ff6f91"}]'>
+              <svg viewBox="0 0 120 120"></svg>
+              <div class="donut-center"><strong>%80</strong><span>19–24</span></div>
+            </div>
+            <ul class="legend"></ul>
+          </div>
+        </article>
+
+        <article class="chart-card glass reveal" style="--d:.16s">
+          <header>
+            <h3>Eğitim Durumu</h3>
+            <span class="badge">Lisans odaklı</span>
+          </header>
+          <div class="chart-body">
+            <div class="donut" data-donut='[{"label":"Lisans","value":92.4,"color":"#34f5c5"},{"label":"Lisansüstü","value":7.6,"color":"#a17bff"}]'>
+              <svg viewBox="0 0 120 120"></svg>
+              <div class="donut-center"><strong>%92.4</strong><span>Lisans</span></div>
+            </div>
+            <ul class="legend"></ul>
+          </div>
+        </article>
+
+        <article class="chart-card glass reveal" data-span="2" style="--d:.24s">
+          <header>
+            <h3>Fakülte Dağılımı</h3>
+            <span class="badge">4 fakülte</span>
+          </header>
+          <div class="chart-body">
+            <ul class="hbar" data-hbar='[
+              {"label":"Mühendislik Bilimleri ve Tasarım","value":32.4,"color":"#34f5c5"},
+              {"label":"Fen-Edebiyat","value":30.7,"color":"#3aa8ff"},
+              {"label":"İktisadi ve İdari Bilimler","value":21.4,"color":"#ffb547"},
+              {"label":"Edebiyat-İnsani","value":15.5,"color":"#a17bff"}
+            ]'></ul>
+          </div>
+        </article>
+
+        <article class="chart-card glass reveal" style="--d:.32s">
+          <header>
+            <h3>Sınıf Düzeyi</h3>
+            <span class="badge">6 kategori</span>
+          </header>
+          <div class="chart-body">
+            <div class="donut" data-donut='[
+              {"label":"Hazırlık","value":4.8,"color":"#34f5c5"},
+              {"label":"1. sınıf","value":19.5,"color":"#3aa8ff"},
+              {"label":"2. sınıf","value":15.2,"color":"#ffb547"},
+              {"label":"3. sınıf","value":51.9,"color":"#ff6f91"},
+              {"label":"4. sınıf","value":6.2,"color":"#a17bff"},
+              {"label":"Lisansüstü","value":2.4,"color":"#88e0a3"}
+            ]'>
+              <svg viewBox="0 0 120 120"></svg>
+              <div class="donut-center"><strong>%51.9</strong><span>3. sınıf</span></div>
+            </div>
+            <ul class="legend"></ul>
+          </div>
+        </article>
+
+        <article class="chart-card glass reveal" style="--d:.4s">
+          <header>
+            <h3>Barınma Durumu</h3>
+            <span class="badge">210 yanıt</span>
+          </header>
+          <div class="chart-body">
+            <div class="donut" data-donut='[
+              {"label":"Aile evinde","value":44.3,"color":"#34f5c5"},
+              {"label":"Öğrenci evinde","value":32.2,"color":"#3aa8ff"},
+              {"label":"Yurt/KYK","value":23.5,"color":"#ffb547"}
+            ]'>
+              <svg viewBox="0 0 120 120"></svg>
+              <div class="donut-center"><strong>%44.3</strong><span>Aile evi</span></div>
+            </div>
+            <ul class="legend"></ul>
+          </div>
+        </article>
+
+        <article class="chart-card glass reveal" data-span="2" style="--d:.48s">
+          <header>
+            <h3>Aylık Ortalama Harcama</h3>
+            <span class="badge">TL</span>
+          </header>
+          <div class="chart-body">
+            <ul class="hbar" data-hbar='[
+              {"label":"< 5.000 ₺","value":35.7,"color":"#34f5c5"},
+              {"label":"5.000 – 9.000 ₺","value":35.7,"color":"#3aa8ff"},
+              {"label":"9.000 – 13.000 ₺","value":14.3,"color":"#ffb547"},
+              {"label":"> 13.000 ₺","value":14.3,"color":"#a17bff"}
+            ]'></ul>
+          </div>
+        </article>
+
+      </div>
+    </div>
+
+    <!-- AWARENESS PANEL -->
+    <div class="panel" data-panel="aware">
+      <div class="chart-grid">
+
+        <article class="chart-card glass reveal" data-span="2">
+          <header>
+            <h3>Çevresel Duyarlılık Seviyesi</h3>
+            <span class="badge">Öz değerlendirme</span>
+          </header>
+          <div class="chart-body">
+            <ul class="hbar" data-hbar='[
+              {"label":"Çok Az","value":2.4,"color":"#ff6f91"},
+              {"label":"Az","value":16.2,"color":"#ffb547"},
+              {"label":"Orta","value":56.0,"color":"#34f5c5"},
+              {"label":"Çok","value":14.3,"color":"#3aa8ff"},
+              {"label":"Çok Yüksek","value":11.1,"color":"#a17bff"}
+            ]'></ul>
+          </div>
+        </article>
+
+        <article class="chart-card glass reveal" style="--d:.1s">
+          <header>
+            <h3>Karbon/Su Ayak İzi Hesapladınız mı?</h3>
+            <span class="badge">Geçmiş deneyim</span>
+          </header>
+          <div class="chart-body">
+            <div class="donut" data-donut='[
+              {"label":"Evet","value":21.4,"color":"#34f5c5"},
+              {"label":"Hayır","value":78.6,"color":"#ff6f91"}
+            ]'>
+              <svg viewBox="0 0 120 120"></svg>
+              <div class="donut-center"><strong>%78.6</strong><span>Hesaplamadı</span></div>
+            </div>
+            <ul class="legend"></ul>
+          </div>
+        </article>
+
+        <article class="chart-card glass reveal" data-span="2" style="--d:.2s">
+          <header>
+            <h3>Sürdürülebilirlik Bilgi Düzeyi</h3>
+            <span class="badge">Likert ölçek</span>
+          </header>
+          <div class="chart-body">
+            <ul class="hbar" data-hbar='[
+              {"label":"Çok Az","value":7.6,"color":"#ff6f91"},
+              {"label":"Az","value":16.7,"color":"#ffb547"},
+              {"label":"Orta","value":35.2,"color":"#34f5c5"},
+              {"label":"İyi","value":31.0,"color":"#3aa8ff"},
+              {"label":"Çok İyi","value":9.5,"color":"#a17bff"}
+            ]'></ul>
+          </div>
+        </article>
+
+        <article class="chart-card glass reveal" style="--d:.3s">
+          <header>
+            <h3>Sonucumu Mail ile İstiyorum</h3>
+            <span class="badge">İlgi göstergesi</span>
+          </header>
+          <div class="chart-body">
+            <div class="donut" data-donut='[
+              {"label":"Evet","value":55,"color":"#34f5c5"},
+              {"label":"Hayır","value":45,"color":"#3aa8ff"}
+            ]'>
+              <svg viewBox="0 0 120 120"></svg>
+              <div class="donut-center"><strong>%55</strong><span>Evet</span></div>
+            </div>
+            <ul class="legend"></ul>
+          </div>
+        </article>
+
+      </div>
+    </div>
+
+    <!-- CARBON PANEL -->
+    <div class="panel" data-panel="carbon">
+
+      <div class="category-head reveal">
+        <span class="cat-tag">GIDA</span>
+        <h3>Beslenme alışkanlıkları</h3>
+        <p>Sürdürülebilir gıda tüketim davranışlarının frekans dağılımı.</p>
+      </div>
+      <div class="chart-grid">
+        <article class="chart-card glass reveal" data-span="3">
+          <div class="chart-body">
+            <div class="grouped-bars" data-grouped='{
+              "categories":["Hiçbir zaman","Nadiren","Ara sıra","Sıklıkla","Her zaman"],
+              "groups":[
+                {"label":"Kampüs cenneti karbondioksitli olarak alıyorum","values":[18,22,30,18,12]},
+                {"label":"Sebze meyve alışverişimi pazardan yapıyorum","values":[10,18,28,30,14]},
+                {"label":"Hayır ve ayakkabı çıktıkları yerden takip ederim","values":[28,30,22,12,8]},
+                {"label":"Hijyenden fazla gıda tüketirim","values":[14,22,28,24,12]}
+              ]
+            }'></div>
+          </div>
+        </article>
+      </div>
+
+      <div class="category-head reveal">
+        <span class="cat-tag">ATIK YÖNETİMİ</span>
+        <h3>Geri dönüşüm ve atık alışkanlıkları</h3>
+        <p>Kompost, ambalaj ve atık ayrıştırma davranışlarının frekansı.</p>
+      </div>
+      <div class="chart-grid">
+        <article class="chart-card glass reveal" data-span="3">
+          <div class="chart-body">
+            <div class="grouped-bars" data-grouped='{
+              "categories":["Hiçbir zaman","Nadiren","Ara sıra","Sıklıkla","Her zaman"],
+              "groups":[
+                {"label":"Pil/atıkları geri dönüşüm kutularına atarım","values":[12,18,24,28,18]},
+                {"label":"Alışveriş çantamı yanımda taşırım","values":[16,20,22,26,16]},
+                {"label":"Tek kullanımlık ürünlerden kaçınırım","values":[20,24,26,20,10]},
+                {"label":"Atık alışveriş ürünleri kontrol ederim","values":[22,26,24,18,10]}
+              ]
+            }'></div>
+          </div>
+        </article>
+      </div>
+
+      <div class="category-head reveal">
+        <span class="cat-tag">ULAŞIM</span>
+        <h3>Günlük ulaşım tercihi</h3>
+        <p>Toplu taşıma, yürüyüş ve özel araç kullanımının dağılımı.</p>
+      </div>
+      <div class="chart-grid">
+        <article class="chart-card glass reveal" data-span="3">
+          <div class="chart-body">
+            <div class="grouped-bars" data-grouped='{
+              "categories":["Hiçbir zaman","Nadiren","Ara sıra","Sıklıkla","Her zaman"],
+              "groups":[
+                {"label":"Okula gidip gelirken otobüs/dolmuş kullanırım","values":[10,16,22,28,24]},
+                {"label":"Bisiklet veya yürüyüşü tercih ederim","values":[22,26,22,18,12]},
+                {"label":"Tek başıma araç kullanmak yerine paylaşırım","values":[24,28,24,16,8]},
+                {"label":"Kısa mesafelerde araç kullanmam","values":[20,22,24,22,12]}
+              ]
+            }'></div>
+          </div>
+        </article>
+      </div>
+
+      <div class="category-head reveal">
+        <span class="cat-tag">YAKIT TÜKETİMİ</span>
+        <h3>Isıtma ve enerji tüketimi</h3>
+      </div>
+      <div class="chart-grid">
+        <article class="chart-card glass reveal" data-span="3">
+          <div class="chart-body">
+            <div class="grouped-bars" data-grouped='{
+              "categories":["Hiçbir zaman","Nadiren","Ara sıra","Sıklıkla","Her zaman"],
+              "groups":[
+                {"label":"Yaşadığım yerde yenilenebilir enerji kullanılır","values":[28,26,22,16,8]},
+                {"label":"Kışları kalorifer/peteği derecesini düşürürüm","values":[14,18,26,28,14]},
+                {"label":"Kampüste elektrikli kombi tercih ederim","values":[26,22,24,18,10]}
+              ]
+            }'></div>
+          </div>
+        </article>
+      </div>
+
+      <div class="category-head reveal">
+        <span class="cat-tag">ELEKTRİK TÜKETİMİ</span>
+        <h3>Elektrik kullanım alışkanlıkları</h3>
+      </div>
+      <div class="chart-grid">
+        <article class="chart-card glass reveal" data-span="3">
+          <div class="chart-body">
+            <div class="grouped-bars" data-grouped='{
+              "categories":["Hiçbir zaman","Nadiren","Ara sıra","Sıklıkla","Her zaman"],
+              "groups":[
+                {"label":"Evden çıkarken ışıkları söndürürüm","values":[6,10,18,30,36]},
+                {"label":"LED tasarruflu ampul kullanırım","values":[10,16,22,30,22]},
+                {"label":"Elektronik cihazları fişten çekerim","values":[18,22,26,22,12]},
+                {"label":"Bilgisayarımı uyku moduna alırım","values":[12,18,24,28,18]}
+              ]
+            }'></div>
+          </div>
+        </article>
+      </div>
+
+    </div>
+
+    <!-- WATER PANEL -->
+    <div class="panel" data-panel="water">
+
+      <div class="category-head reveal">
+        <span class="cat-tag water">SU TÜKETİMİ</span>
+        <h3>Bireysel su kullanım davranışları</h3>
+        <p>Banyo, mutfak ve genel kullanımda tasarruf alışkanlıklarının dağılımı.</p>
+      </div>
+      <div class="chart-grid">
+        <article class="chart-card glass reveal" data-span="3">
+          <div class="chart-body">
+            <div class="grouped-bars" data-grouped='{
+              "categories":["Hiçbir zaman","Nadiren","Ara sıra","Sıklıkla","Her zaman"],
+              "colors":["#1d6e9b","#3aa8ff","#34f5c5","#88e0a3","#a17bff"],
+              "groups":[
+                {"label":"Diş fırçalarken musluğu kapatırım","values":[6,10,16,28,40]},
+                {"label":"Duş süremi 5 dakikanın altında tutarım","values":[20,28,24,18,10]},
+                {"label":"Bulaşık makinesini dolu çalıştırırım","values":[8,12,18,30,32]},
+                {"label":"Çamaşır makinesini tam yükle çalıştırırım","values":[6,10,16,32,36]},
+                {"label":"Yağmur suyu/atık su geri kullanımına dikkat ederim","values":[28,26,22,16,8]}
+              ]
+            }'></div>
+          </div>
+        </article>
+      </div>
+
+      <div class="water-stats reveal">
+        <div class="wstat glass">
+          <div class="wstat-num"><span data-count="76" data-suffix="%">0</span></div>
+          <div class="wstat-cap">Musluğu kapatma davranışı (sıklıkla + her zaman)</div>
+        </div>
+        <div class="wstat glass">
+          <div class="wstat-num"><span data-count="28" data-suffix="%">0</span></div>
+          <div class="wstat-cap">Kısa duş alışkanlığı oranı</div>
+        </div>
+        <div class="wstat glass">
+          <div class="wstat-num"><span data-count="68" data-suffix="%">0</span></div>
+          <div class="wstat-cap">Tam dolu makine kullanımı</div>
+        </div>
+        <div class="wstat glass">
+          <div class="wstat-num"><span data-count="24" data-suffix="%">0</span></div>
+          <div class="wstat-cap">Yağmur suyu/geri kullanım farkındalığı</div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</section>
+
+<!-- SDG -->
+<section class="sdg" id="sdg">
+  <div class="container">
+    <header class="section-head reveal">
+      <span class="kicker">05 · Sürdürülebilir Kalkınma Hedefleri</span>
+      <h2 class="section-title">Birleşmiş Milletler <span class="gradient-text">SKH</span> uyumu</h2>
+      <p class="section-lead">Bu araştırmanın bulguları, UN 2030 Gündemi'nin yedi temel hedefine doğrudan katkı sunar.</p>
+    </header>
+    <div class="sdg-grid">
+      <article class="sdg-card reveal" style="--c:#26bde2">
+        <div class="sdg-num">06</div>
+        <h3>Temiz Su ve Sanitasyon</h3>
+        <p>Bireysel su tasarrufu davranışlarının ölçülmesi ve geliştirilmesi.</p>
+        <svg class="sdg-icon" viewBox="0 0 24 24"><path d="M12 3s7 8 7 13a7 7 0 0 1-14 0c0-5 7-13 7-13Z" fill="currentColor"/></svg>
+      </article>
+      <article class="sdg-card reveal" style="--c:#fcc30b;--d:.06s">
+        <div class="sdg-num">07</div>
+        <h3>Erişilebilir & Temiz Enerji</h3>
+        <p>Yenilenebilir enerji farkındalığı ve elektrik tasarrufunun teşviki.</p>
+        <svg class="sdg-icon" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z" fill="currentColor"/></svg>
+      </article>
+      <article class="sdg-card reveal" style="--c:#fd9d24;--d:.12s">
+        <div class="sdg-num">11</div>
+        <h3>Sürdürülebilir Şehirler</h3>
+        <p>Toplu taşıma ve düşük emisyonlu ulaşım pratiklerinin yaygınlaştırılması.</p>
+        <svg class="sdg-icon" viewBox="0 0 24 24"><path d="M3 21h18M5 21V9l4-3 4 3v12M13 21V12l4-2 4 2v9" stroke="currentColor" stroke-width="1.8" fill="none"/></svg>
+      </article>
+      <article class="sdg-card reveal" style="--c:#bf8b2e;--d:.18s">
+        <div class="sdg-num">12</div>
+        <h3>Sorumlu Tüketim & Üretim</h3>
+        <p>Atık azaltma, geri dönüşüm ve bilinçli gıda tüketimi davranışları.</p>
+        <svg class="sdg-icon" viewBox="0 0 24 24"><path d="M6 2h12l-2 20H8L6 2Zm0 6h12" stroke="currentColor" stroke-width="1.8" fill="none"/></svg>
+      </article>
+      <article class="sdg-card reveal" style="--c:#3f7e44;--d:.24s">
+        <div class="sdg-num">13</div>
+        <h3>İklim Eylemi</h3>
+        <p>Karbon ayak izi farkındalığı ve düşük karbonlu yaşam kültürü.</p>
+        <svg class="sdg-icon" viewBox="0 0 24 24"><path d="M12 3v18M3 12h18M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.6" fill="none"/></svg>
+      </article>
+      <article class="sdg-card reveal" style="--c:#56c02b;--d:.3s">
+        <div class="sdg-num">15</div>
+        <h3>Karasal Yaşam</h3>
+        <p>Yerel ekosistem ve biyoçeşitlilik üzerine dolaylı etkilerin azaltılması.</p>
+        <svg class="sdg-icon" viewBox="0 0 24 24"><path d="M12 22V8M8 12c0-3 4-7 4-7s4 4 4 7-2 5-4 5-4-2-4-5Z" stroke="currentColor" stroke-width="1.6" fill="none"/></svg>
+      </article>
+      <article class="sdg-card reveal" style="--c:#c5192d;--d:.36s">
+        <div class="sdg-num">04</div>
+        <h3>Nitelikli Eğitim</h3>
+        <p>Üniversite çağındaki bireylerde sürdürülebilirlik okuryazarlığı.</p>
+        <svg class="sdg-icon" viewBox="0 0 24 24"><path d="M2 9 12 4l10 5-10 5L2 9Z M6 11v5c0 1 3 3 6 3s6-2 6-3v-5" stroke="currentColor" stroke-width="1.6" fill="none"/></svg>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- METHODOLOGY -->
+<section class="method" id="method">
+  <div class="container">
+    <header class="section-head reveal">
+      <span class="kicker">06 · Yöntem</span>
+      <h2 class="section-title">Araştırma <span class="gradient-text">akışı</span></h2>
+    </header>
+
+    <ol class="timeline">
+      <li class="t-item reveal">
+        <span class="t-dot"></span>
+        <div class="t-card glass">
+          <div class="t-step">01</div>
+          <h3>Anket Tasarımı</h3>
+          <p>Literatür taraması sonrasında karbon ve su ayak izi göstergelerini içeren 50+ maddelik bir form hazırlandı.</p>
+        </div>
+      </li>
+      <li class="t-item reveal" style="--d:.1s">
+        <span class="t-dot"></span>
+        <div class="t-card glass">
+          <div class="t-step">02</div>
+          <h3>Katılımcı Toplama</h3>
+          <p>Anket, çeşitli fakültelerden 210 lisans ve lisansüstü öğrenciye dijital ortamda gönüllü olarak uygulandı.</p>
+        </div>
+      </li>
+      <li class="t-item reveal" style="--d:.2s">
+        <span class="t-dot"></span>
+        <div class="t-card glass">
+          <div class="t-step">03</div>
+          <h3>Veri Analizi</h3>
+          <p>5'li Likert ölçek puanlamasıyla davranış sıklıkları kategorize edildi ve frekans dağılımları hesaplandı.</p>
+        </div>
+      </li>
+      <li class="t-item reveal" style="--d:.3s">
+        <span class="t-dot"></span>
+        <div class="t-card glass">
+          <div class="t-step">04</div>
+          <h3>Yorumlama</h3>
+          <p>Demografik değişkenlerle çevresel davranışlar arasındaki ilişkiler tartışıldı.</p>
+        </div>
+      </li>
+      <li class="t-item reveal" style="--d:.4s">
+        <span class="t-dot"></span>
+        <div class="t-card glass">
+          <div class="t-step">05</div>
+          <h3>Değerlendirme</h3>
+          <p>Sonuçlar; sürdürülebilirlik eğitimi ve politika önerileri çerçevesinde raporlandı.</p>
+        </div>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer" id="footer">
+  <div class="footer-bg"><div class="blob blob-1"></div><div class="blob blob-2"></div></div>
+  <div class="container">
+    <div class="footer-grid">
+      <div class="f-brand">
+        <div class="brand">
+          <span class="brand-mark">
+            <svg viewBox="0 0 32 32"><use href="#"/><path d="M6 26 C6 14 14 6 26 6 C26 18 18 26 6 26 Z" fill="url(#leafGrad)"/><path d="M8 24 C14 18 20 14 24 10" stroke="#04110e" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+          </span>
+          <span class="brand-text">GreenCampus</span>
+        </div>
+        <p class="f-tag">"Ölçemediğimizi yönetemeyiz." — Sürdürülebilir bir gelecek için bilinçli adımlar.</p>
+      </div>
+      <div>
+        <h4>Proje</h4>
+        <ul>
+          <li><a href="#about">Araştırma</a></li>
+          <li><a href="#dashboard">Pano</a></li>
+          <li><a href="#sdg">SKH</a></li>
+          <li><a href="#method">Yöntem</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Akademik</h4>
+        <ul>
+          <li>Karbon ve Su Ayak İzi Anketi</li>
+          <li>Nicel Saha Çalışması</li>
+          <li>Disiplinlerarası Analiz</li>
+          <li>210 Katılımcı</li>
+        </ul>
+      </div>
+      <div>
+        <h4>İletişim</h4>
+        <ul>
+          <li>Pınar Kuşlu</li>
+          <li><a href="mailto:pinaarkuslu@gmail.com">pinaarkuslu@gmail.com</a></li>
+          <li><span class="muted">Üniversite Araştırma Projesi</span></li>
+          <li><span class="muted">2026 · Tüm hakları saklıdır.</span></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 GreenCampus · Karbon & Su Ayak İzi Farkındalık Analizi</span>
+      <span class="pulse"><span class="pulse-dot"></span> Sürdürülebilir gelecek için</span>
+    </div>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
